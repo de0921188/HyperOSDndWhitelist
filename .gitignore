@@ -1,0 +1,12 @@
+.gradle/
+**/build/
+local.properties
+work/
+*.keystore
+*.jks
+/artifacts/
+/build/
+/*_20261124.md
+/UPDATE_SUMMARY_*.md
+/UPDATE_SUMMARY/
+/VALIDATION.md

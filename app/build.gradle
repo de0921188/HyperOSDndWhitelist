@@ -1,0 +1,27 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.qing.dnd.whitelist'
+    compileSdk 37
+    defaultConfig {
+        applicationId 'com.qing.dnd.whitelist'
+        minSdk 31
+        targetSdk 36
+        versionCode 9
+        versionName '0.2.2'
+    }
+    buildTypes { release { minifyEnabled false } }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint { abortOnError true }
+    packaging { resources { merges += 'META-INF/xposed/*' } }
+}
+dependencies {
+    compileOnly 'io.github.libxposed:api:102.0.0'
+    implementation 'io.github.libxposed:service:102.0.0'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+
+

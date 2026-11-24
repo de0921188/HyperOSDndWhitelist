@@ -1,0 +1,25 @@
+<resources>
+    <style name="Theme.DndWhitelist" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/page_background</item>
+        <item name="android:colorBackground">@color/page_background</item>
+        <item name="android:textColorPrimary">@color/page_text</item>
+        <item name="android:textColorSecondary">@color/page_secondary</item>
+        <item name="android:textColorHint">@color/page_secondary</item>
+        <item name="android:colorAccent">@color/page_accent</item>
+        <item name="android:colorControlActivated">@color/page_accent</item>
+        <item name="android:colorControlNormal">@color/page_control</item>
+        <item name="android:colorButtonNormal">@color/page_button</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:alertDialogTheme">@style/Theme.DndWhitelist.Dialog</item>
+    </style>
+    <style name="Theme.DndWhitelist.Dialog" parent="android:style/Theme.Material.Dialog.Alert">
+        <item name="android:colorAccent">@color/page_accent</item>
+        <item name="android:colorControlActivated">@color/page_accent</item>
+        <item name="android:colorControlNormal">@color/page_control</item>
+        <item name="android:textColorPrimary">@color/page_text</item>
+        <item name="android:textColorSecondary">@color/page_secondary</item>
+        <item name="android:colorBackground">@color/page_background</item>
+    </style>
+</resources>
