@@ -2,6 +2,8 @@
 
 適用於 HyperOS 的 LSPosed 模組，讓選定 App 在勿擾模式下保留通知提醒，並可為每個 App 選擇自動亮屏或系統側邊光效。設定頁支援深色模式及系統主題色。
 
+包名：`io.github.de0921188.dnd.whitelist`。0.2.4 起改用此包名以符合 LSPosed 倉庫規範。Android 會將舊包名版本視為另一個 App，設定不會自動繼承；請保留原設定並避免同時啟用兩個模組。
+
 ## 使用方式
 
 1. 安裝支援 libxposed API 102 的 LSPosed，並安裝本模組。

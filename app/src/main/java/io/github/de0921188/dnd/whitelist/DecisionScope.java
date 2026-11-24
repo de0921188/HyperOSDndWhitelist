@@ -1,4 +1,4 @@
-package com.qing.dnd.whitelist;
+package io.github.de0921188.dnd.whitelist;
 
 /** Nested decisions must restore the parent state, including when a decision throws. */
 final class DecisionScope {

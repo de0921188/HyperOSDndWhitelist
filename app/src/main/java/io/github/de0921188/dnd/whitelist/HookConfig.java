@@ -1,4 +1,4 @@
-package com.qing.dnd.whitelist;
+package io.github.de0921188.dnd.whitelist;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
 import android.util.Log;

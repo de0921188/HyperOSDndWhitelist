@@ -1,4 +1,4 @@
-package com.qing.dnd.whitelist;
+package io.github.de0921188.dnd.whitelist;
 import org.junit.Test;
 import java.util.Map;
 import java.util.Set;
@@ -7,11 +7,11 @@ import static org.junit.Assert.*;
 
 public class AppModesTest {
     @Test public void differentAppsCanUseOppositeModesWithoutInterference() {
-        Set<String> apps = Set.of("0:com.example.chat", "0:com.qing.dnd.whitelist");
-        Map<String, Integer> modes = Map.of("0:com.example.chat", 1, "0:com.qing.dnd.whitelist", 2);
+        Set<String> apps = Set.of("0:com.example.chat", "0:io.github.de0921188.dnd.whitelist");
+        Map<String, Integer> modes = Map.of("0:com.example.chat", 1, "0:io.github.de0921188.dnd.whitelist", 2);
         WhitelistPolicy p = new WhitelistPolicy(true, apps, 2, modes);
         assertEquals(1, p.screenModeFor(0, "com.example.chat"));
-        assertEquals(2, p.screenModeFor(0, "com.qing.dnd.whitelist"));
+        assertEquals(2, p.screenModeFor(0, "io.github.de0921188.dnd.whitelist"));
         assertEquals(0, p.screenModeFor(10, "com.example.chat"));
         assertEquals(0, p.screenModeFor(0, "com.other"));
         assertEquals(modes, AppModes.decode(AppModes.encode(modes)));

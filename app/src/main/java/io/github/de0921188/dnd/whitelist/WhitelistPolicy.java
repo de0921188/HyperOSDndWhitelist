@@ -1,4 +1,4 @@
-package com.qing.dnd.whitelist;
+package io.github.de0921188.dnd.whitelist;
 
 import java.util.Collections;
 import java.util.HashSet;

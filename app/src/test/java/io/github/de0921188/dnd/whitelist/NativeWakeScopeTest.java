@@ -1,4 +1,4 @@
-package com.qing.dnd.whitelist;
+package io.github.de0921188.dnd.whitelist;
 import org.junit.Test;
 import java.util.Set;
 import static org.junit.Assert.*;

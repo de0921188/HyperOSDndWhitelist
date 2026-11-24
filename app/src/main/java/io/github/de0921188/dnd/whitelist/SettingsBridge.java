@@ -1,4 +1,4 @@
-package com.qing.dnd.whitelist;
+package io.github.de0921188.dnd.whitelist;
 
 import android.app.Application;
 import android.content.BroadcastReceiver;

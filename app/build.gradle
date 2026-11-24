@@ -1,13 +1,13 @@
 plugins { id 'com.android.application' }
 android {
-    namespace 'com.qing.dnd.whitelist'
+    namespace 'io.github.de0921188.dnd.whitelist'
     compileSdk 37
     defaultConfig {
-        applicationId 'com.qing.dnd.whitelist'
+        applicationId 'io.github.de0921188.dnd.whitelist'
         minSdk 31
         targetSdk 36
-        versionCode 10
-        versionName '0.2.3'
+        versionCode 11
+        versionName '0.2.4'
     }
     buildTypes { release { minifyEnabled false } }
     compileOptions {
