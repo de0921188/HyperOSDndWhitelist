@@ -6,8 +6,8 @@ android {
         applicationId 'com.qing.dnd.whitelist'
         minSdk 31
         targetSdk 36
-        versionCode 9
-        versionName '0.2.2'
+        versionCode 10
+        versionName '0.2.3'
     }
     buildTypes { release { minifyEnabled false } }
     compileOptions {

@@ -103,11 +103,11 @@ public final class MainActivity extends Activity {
         Button test = new Button(this);
         test.setText(getString(R.string.test_button));
         test.setOnClickListener(v -> scheduleTest());
-        actions.addView(test, new LinearLayout.LayoutParams(0, dp(52), 1));
+        actions.addView(test, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
         Button help = new Button(this);
         help.setText(getString(R.string.help_button));
         help.setOnClickListener(v -> showHelp());
-        actions.addView(help, new LinearLayout.LayoutParams(0, dp(52), 1));
+        actions.addView(help, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
         root.addView(actions);
         search = new EditText(this);
         search.setSingleLine(true);
