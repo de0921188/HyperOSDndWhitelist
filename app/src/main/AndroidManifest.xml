@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <permission android:name="io.github.de0921188.dnd.whitelist.permission.DIAGNOSTICS" android:protectionLevel="signature" />
+    <uses-permission android:name="io.github.de0921188.dnd.whitelist.permission.DIAGNOSTICS" />
     <!-- This locally installed LSPosed utility selects any installed package, including background-only apps. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />

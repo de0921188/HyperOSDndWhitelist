@@ -6,8 +6,8 @@ android {
         applicationId 'io.github.de0921188.dnd.whitelist'
         minSdk 31
         targetSdk 36
-        versionCode 11
-        versionName '0.2.4'
+        versionCode 13
+        versionName '0.2.6'
     }
     buildTypes { release { minifyEnabled false } }
     compileOptions {
@@ -22,6 +22,3 @@ dependencies {
     implementation 'io.github.libxposed:service:102.0.0'
     testImplementation 'junit:junit:4.13.2'
 }
-
-
-

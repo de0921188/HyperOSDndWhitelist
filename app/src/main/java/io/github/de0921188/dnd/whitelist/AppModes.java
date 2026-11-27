@@ -15,19 +15,19 @@ final class AppModes {
             if (split < 3 || split != value.length() - 2) continue;
             String key = value.substring(0, split);
             char mode = value.charAt(split + 1);
-            if (mode == '1' || mode == '2') {
+            if (mode >= '0' && mode <= '3') {
                 Integer old = result.putIfAbsent(key, mode - '0');
                 // Reject conflicting duplicate entries deterministically.
-                if (old != null && old != mode - '0') result.put(key, 0);
+                if (old != null && old != mode - '0') result.put(key, -1);
             }
         }
-        result.values().removeIf(value -> value == 0);
+        result.values().removeIf(value -> value < 0);
         return result;
     }
     static Set<String> encode(Map<String, Integer> modes) {
         Set<String> result = new HashSet<>();
         modes.forEach((key, mode) -> {
-            if (mode != null && (mode == 1 || mode == 2)) result.add(key + "=" + mode);
+            if (mode != null && (mode >= 0 && mode <= 3)) result.add(key + "=" + mode);
         });
         return result;
     }

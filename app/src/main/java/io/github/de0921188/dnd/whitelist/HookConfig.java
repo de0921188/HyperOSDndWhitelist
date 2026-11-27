@@ -22,9 +22,11 @@ final class HookConfig {
         try {
             if (preferences == null) preferences = module.getRemotePreferences("config");
             Map<String, ?> values = preferences.getAll();
-            int mode = values.get("screen_mode") instanceof Integer ? (Integer) values.get("screen_mode") : 0;
+            int mode = WhitelistPolicy.legacyMode(values.get("screen_mode"));
             snapshot = new WhitelistPolicy(Boolean.TRUE.equals(values.get("enabled")), strings(values.get("apps")), mode,
-                    AppModes.decode(strings(values.get("app_modes"))));
+                    AppModes.decode(strings(values.get("app_modes"))), strings(values.get("channels")),
+                    strings(values.get("no_sound")), strings(values.get("no_vibration")));
+            reportedError = false;
         } catch (Throwable error) {
             snapshot = new WhitelistPolicy(false, Collections.emptySet()); preferences = null;
             if (!reportedError) {

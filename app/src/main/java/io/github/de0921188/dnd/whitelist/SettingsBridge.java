@@ -48,7 +48,7 @@ public final class SettingsBridge extends Application implements XposedServiceHe
             SharedPreferences pending = getSharedPreferences("migration_pending", MODE_PRIVATE);
             if (pending.getBoolean("_requested", false)) {
                 Map<String, ?> source = pending.getAll();
-                SharedPreferences.Editor edit = remote.edit().clear();
+                SharedPreferences.Editor edit = remote.edit();
                 for (Map.Entry<String, ?> entry : source.entrySet()) {
                     String key = entry.getKey(); Object value = entry.getValue();
                     if (key.equals("_requested")) continue;
@@ -86,6 +86,30 @@ public final class SettingsBridge extends Application implements XposedServiceHe
         notifyListeners();
     }
     SharedPreferences preferences() { return preferences; }
+    private final java.util.concurrent.ExecutorService writer = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private boolean saving;
+    boolean saving() { return saving; }
+    void persist(SharedPreferences target, boolean enabled, Set<String> apps, Set<String> modes, Set<String> channels, Set<String> noSound, Set<String> noVibration) {
+        if (saving || target != preferences || target == null) return;
+        saving = true;
+        writer.execute(() -> {
+            boolean success;
+            try {
+                success = target.edit().putBoolean("enabled", enabled).putStringSet("apps", apps)
+                        .putStringSet("app_modes", modes).putStringSet("channels", channels)
+                        .putStringSet("no_sound", noSound).putStringSet("no_vibration", noVibration).commit();
+            } catch (RuntimeException e) {
+                success = false;
+                Log.w("DndWhitelist", "Settings write failed", e);
+            }
+            boolean saved = success;
+            main.post(() -> {
+                saving = false;
+                if (!saved) android.widget.Toast.makeText(this, R.string.save_failed, android.widget.Toast.LENGTH_LONG).show();
+                notifyListeners();
+            });
+        });
+    }
     String status() { return status; }
     void addListener(Runnable listener) { listeners.add(listener); }
     void removeListener(Runnable listener) { listeners.remove(listener); }
