@@ -61,10 +61,20 @@ public final class MainActivity extends Activity {
             Process process = null;
             boolean success = false;
             try {
-                process = new ProcessBuilder("su","-c","cmd notification set_dnd " + (enable ? "priority" : "all"))
-                        .redirectOutput(ProcessBuilder.Redirect.to(new java.io.File("/dev/null")))
-                        .redirectError(ProcessBuilder.Redirect.to(new java.io.File("/dev/null"))).start();
+                String apk = getApplicationInfo().sourceDir;
+                if (apk.indexOf(39) >= 0) throw new IllegalStateException("Invalid APK path");
+                String command = "CLASSPATH='" + apk + "' /system/bin/app_process /system/bin "
+                        + DndCommand.class.getName() + " " + (enable ? "1" : "0");
+                process = new ProcessBuilder("su","-c",command).redirectErrorStream(true).start();
                 success = process.waitFor(30,java.util.concurrent.TimeUnit.SECONDS) && process.exitValue() == 0;
+                if (process.isAlive()) {
+                    android.util.Log.w("DndWhitelist","DND command timed out");
+                } else {
+                    byte[] buffer = new byte[4096];
+                    int count = process.getInputStream().read(buffer);
+                    String output = count > 0 ? new String(buffer,0,count,java.nio.charset.StandardCharsets.UTF_8) : "";
+                    android.util.Log.i("DndWhitelist","DND request="+enable+" exit="+process.exitValue()+" output="+output);
+                }
                 if (success) {
                     for (int i = 0; i < 10; i++) {
                         boolean active = nm.getCurrentInterruptionFilter() > NotificationManager.INTERRUPTION_FILTER_ALL;
@@ -76,6 +86,7 @@ public final class MainActivity extends Activity {
             } catch (Exception e) {
                 android.util.Log.w("DndWhitelist","DND toggle failed",e);
             } finally { if (process != null) process.destroy(); }
+            android.util.Log.i("DndWhitelist","DND verified="+success+" actual="+nm.getCurrentInterruptionFilter());
             boolean completed = success;
             main.post(() -> {
                 changingDnd = false;
@@ -291,6 +302,7 @@ public final class MainActivity extends Activity {
         NotificationManager nm = getSystemService(NotificationManager.class);
         boolean dnd = nm.getCurrentInterruptionFilter() != NotificationManager.INTERRUPTION_FILTER_ALL;
         if (dndToggle != null) {
+            dndToggle.setImageResource(dnd ? R.drawable.ic_dnd_sun : R.drawable.ic_dnd_moon);
             dndToggle.setImageTintList(android.content.res.ColorStateList.valueOf(getColor(dnd ? R.color.page_accent : R.color.page_secondary)));
             String action = getString(dnd ? R.string.disable_dnd : R.string.enable_dnd);
             dndToggle.setContentDescription(action);

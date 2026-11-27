@@ -86,5 +86,5 @@
     <string name="row_dark">不亮屏、無側邊光效</string>
     <string name="enable_dnd">開啟勿擾</string>
     <string name="disable_dnd">關閉勿擾</string>
-    <string name="dnd_toggle_failed">無法切換勿擾，請確認 Root 授權</string>
+    <string name="dnd_toggle_failed">無法切換勿擾，請查看系統勿擾設定與 Root 授權</string>
 </resources>

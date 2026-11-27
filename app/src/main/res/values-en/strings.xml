@@ -86,5 +86,5 @@
     <string name="row_dark">No screen wake or edge lighting</string>
     <string name="enable_dnd">Turn on Do Not Disturb</string>
     <string name="disable_dnd">Turn off Do Not Disturb</string>
-    <string name="dnd_toggle_failed">Could not change Do Not Disturb. Check root access.</string>
+    <string name="dnd_toggle_failed">Could not change Do Not Disturb. Check system DND settings and root access.</string>
 </resources>
