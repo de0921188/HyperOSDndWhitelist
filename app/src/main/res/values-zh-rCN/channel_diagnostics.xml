@@ -1,0 +1,13 @@
+<resources>
+    <string name="trace_next">诊断下一条通知</string>
+    <string name="trace_wait">请在两分钟内触发目标应用的通知，再查看结果。</string>
+    <string name="trace_result">查看诊断报告</string>
+    <string name="unobserved">未观测到</string>
+    <string name="trace_different">两个进程未确认为同一次通知，请分别解读。</string>
+    <string name="rule_revision">规则版本</string>
+    <string name="only_selected">只允许所选类别（未选择即不放行）</string>
+    <string name="all_categories">允许所有类别</string>
+    <string name="conversations">展开／收起对话</string>
+    <string name="inherit">沿用上级设置</string>
+    <string name="channel_state">重要性 %1$s · 铃声 %2$s · 振动 %3$s</string>
+</resources>

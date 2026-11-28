@@ -2,13 +2,13 @@
 
 讓指定 App 在 HyperOS 勿擾期間保留通知提醒，獨立設定聲音、震動及鎖屏效果。
 
-目前版本 **0.2.7**，套件名稱為 `io.github.de0921188.dnd.whitelist`。
+目前版本 **0.2.8**，套件名稱為 `io.github.de0921188.dnd.whitelist`。
 
 [下載正式 APK](https://github.com/de0921188/HyperOSDndWhitelist/releases/latest) · [LSPosed 官方倉庫](https://github.com/Xposed-Modules-Repo/io.github.de0921188.dnd.whitelist) · [問題回報](https://github.com/de0921188/HyperOSDndWhitelist/issues)
 
 ## 功能
 
-- 按 App 選擇勿擾例外，並可按通知類別名稱勾選放行範圍。
+- 按 App 選擇勿擾例外，並依通知類別選擇放行範圍與獨立提醒方式。
 - 每個 App 獨立選擇自動亮屏、系統側邊光效、跟隨系統鎖屏設定，或不亮屏且無側邊光效。
 - 同一個設定視窗可分別勾選允許聲音與允許震動。例如只震動，或保留聲音與震動但讓螢幕保持暗著。
 - 太陽／月亮圖示單擊切換系統勿擾。勿擾開啟顯示太陽，關閉顯示月亮；開啟時使用優先通知模式。
@@ -23,7 +23,7 @@
 2. 安裝正式 APK，在 LSPosed 啟用模組，作用域選取系統框架 `system` 與系統介面 `com.android.systemui`。
 3. 重新啟動手機，再打開設定頁，確認設定服務連線並開啟「啟用勿擾例外」。
 4. 點選 App，選擇鎖屏效果與聲音、震動選項，按「儲存」。
-5. 如需限制類別，點選該 App 的「通知類別」，勾選類別後儲存。全部取消表示允許該 App 的所有類別。
+5. 如需限制類別，點選該 App 的「通知類別」，勾選類別後儲存。選擇「允許所有類別」或「只允許所選類別」。後者未勾選任何類別時，不會放行通知。
 6. 開啟手機勿擾，使用真實來訊測試。一般規則修改約一秒後對新通知生效。更新涉及系統框架的版本時，重新啟動手機以載入新版。
 
 0.2.4 起採用目前套件名稱。不同套件名稱或不同簽章的安裝有不同的資料範圍，升級前請備份設定。不同 Android 使用者、分身及工作設定檔需各自設定。
@@ -42,15 +42,23 @@
 
 ## 備份與診斷
 
-在「更多設定」匯出目前 Android 使用者的設定。備份包含選取的套件、頻道與提醒偏好，請自行保管。匯入會套用備份總開關及衝突項目的規則，保留其他既有 App，並保留未安裝 App 的規則供後續使用。0.2.6 匯出格式為版本 3，可讀取舊格式。
+在「更多設定」匯出目前 Android 使用者的設定。備份包含選取的套件、頻道與提醒偏好，請自行保管。匯入會套用備份總開關及衝突項目的規則，保留其他既有 App，並保留未安裝 App 的規則供後續使用。0.2.8 匯出格式為版本 4，可讀取版本 1–3 的備份。舊設定有勾選類別時會沿用所選類別，空清單沿用允許所有類別。
 
-相容性診斷顯示 Hook 安裝結果、錯誤次數及取樣耗時，實際效果需使用通知確認。延遲測試通知由本模組發出，若要驗證白名單例外，需將本模組加入白名單；測試其他 App 時使用該 App 的真實來訊。
+相容性診斷顯示功能所需的 Hook、錯誤次數與取樣耗時，並可核對設定頁、系統框架與 SystemUI 載入的規則版本。延遲測試通知由本模組發出，若要驗證白名單例外，需將本模組加入白名單；測試其他 App 時使用該 App 的真實來訊。
+
+## 0.2.8 更新
+
+每個頻道可獨立調整鎖屏、聲音與震動。點選頻道旁的更多按鈕即可覆寫，展開對話可查看子頻道及父頻道繼承狀態。清單顯示系統重要性、鈴聲與震動狀態，亦可開啟系統頻道設定。備份格式 4 包含頻道覆寫並相容版本 1–3。
+
+在 App 設定中選取「診斷下一則通知」，兩分鐘內觸發通知並查看報告。系統框架與 SystemUI 分開回報，複製的報告不含通知內容、套件名稱或頻道識別碼。報告觀察到播放路徑代表系統已進入對應方法，實際發聲與震動仍以裝置為準。
 
 ## 0.2.7 更新
 
 修正自動勿擾規則生效時快捷關閉失敗，補上指令結果診斷與三語錯誤提示。已在實機確認點一下開啟、再點一下關閉，太陽與月亮顯示正確。
 
 ## 驗證範圍
+
+0.2.8 已在實機驗證兩種真實通知事件。勿擾開啟且手機鎖屏時，兩種通知都能自動亮屏、發聲及震動，前提是系統通知頻道允許對應提醒。另確認頻道關閉震動時，仍保留亮屏與聲音。
 
 0.2.6 已驗證真實訊息的自動亮屏、聲音與震動，以及不亮屏且無側邊光效時保留聲音與震動。通知類別取消與恢復勾選可在無重開機下生效。SystemUI 快速重啟及月亮按鈕切換勿擾已通過實機測試。
 
@@ -78,4 +86,4 @@ A HyperOS LSPosed module for per-app Do Not Disturb exceptions. Choose notificat
 
 Enable the module for `system` and `com.android.systemui`, then reboot. Notification permissions, channel settings, volume and lock screen privacy still apply. Root is required for the optional DND toggle, quick restart and fallback category lookup. Interface languages include Traditional Chinese, Simplified Chinese and English.
 
-In 0.2.7, the DND shortcut also handles active automatic rules. The sun indicates DND is on, and the moon indicates DND is off. Tap to toggle.
+Version 0.2.8 adds per-channel overrides, conversation channel inheritance, a clear choice between all channels and selected channels, and an opt-in notification trace with a redacted copy option. Backup format 4 imports versions 1–3. Reboot after updating to load the new hooks.

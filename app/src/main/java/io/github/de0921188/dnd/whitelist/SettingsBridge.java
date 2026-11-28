@@ -89,13 +89,13 @@ public final class SettingsBridge extends Application implements XposedServiceHe
     private final java.util.concurrent.ExecutorService writer = java.util.concurrent.Executors.newSingleThreadExecutor();
     private boolean saving;
     boolean saving() { return saving; }
-    void persist(SharedPreferences target, boolean enabled, Set<String> apps, Set<String> modes, Set<String> channels, Set<String> noSound, Set<String> noVibration) {
+    void persist(SharedPreferences target, boolean enabled, Set<String> apps, Set<String> modes, Set<String> channels, Set<String> noSound, Set<String> noVibration, Set<String> options) {
         if (saving || target != preferences || target == null) return;
         saving = true;
         writer.execute(() -> {
             boolean success;
             try {
-                success = target.edit().putBoolean("enabled", enabled).putStringSet("apps", apps)
+                success = target.edit().putLong("revision", target.getLong("revision",0L)+1).putStringSet("channel_options",options).putBoolean("enabled", enabled).putStringSet("apps", apps)
                         .putStringSet("app_modes", modes).putStringSet("channels", channels)
                         .putStringSet("no_sound", noSound).putStringSet("no_vibration", noVibration).commit();
             } catch (RuntimeException e) {

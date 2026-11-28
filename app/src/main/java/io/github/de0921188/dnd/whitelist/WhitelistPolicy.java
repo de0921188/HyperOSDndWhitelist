@@ -11,10 +11,14 @@ public final class WhitelistPolicy {
     public static final int VISUAL_MASK = 8 | 16 | 32 | 64 | 128 | 256;
     private final Set<String> channelRules;
     private final Set<String> restrictedApps;
+    private final ChannelOptions options;
     private final Set<String> noSound, noVibration;
     private final boolean enabled;
     boolean suppressPlayback(boolean dnd, int user, String pkg, String channel, boolean sound) {
-        return allowsNotification(dnd,user,pkg,channel) && (sound ? noSound : noVibration).contains(key(user,pkg));
+        if (!allowsNotification(dnd,user,pkg,channel)) return false;
+        String key = key(user,pkg);
+        return options.value(key,channel,sound ? "sound" : "vibration",
+                (sound ? noSound : noVibration).contains(key) ? 0 : 1) == 0;
     }
     private final Set<String> apps;
     private final int screenMode;
@@ -41,10 +45,18 @@ public final class WhitelistPolicy {
 
     WhitelistPolicy(boolean enabled, Set<String> apps, int screenMode, Map<String,Integer> appModes,
                     Set<String> rules, Set<String> noSound, Set<String> noVibration) {
+        this(enabled,apps,screenMode,appModes,rules,noSound,noVibration,Collections.emptySet());
+    }
+    WhitelistPolicy(boolean enabled, Set<String> apps, int screenMode, Map<String,Integer> appModes,
+                    Set<String> rules, Set<String> noSound, Set<String> noVibration, Set<String> extras) {
+        options = new ChannelOptions(extras);
         this.noSound = new HashSet<>(noSound);
         this.noVibration = new HashSet<>(noVibration);
         channelRules = new HashSet<>(rules);
         restrictedApps = new HashSet<>();
+        for (String rule : extras) {
+            if (rule.endsWith("=selected")) restrictedApps.add(rule.substring(0,rule.length()-9));
+        }
         for (String rule : rules) {
             int split = rule.indexOf('=');
             if (split > 0) restrictedApps.add(rule.substring(0, split));
@@ -75,7 +87,7 @@ public final class WhitelistPolicy {
     public boolean allowsNotification(boolean dnd, int user, String pkg, String channel) {
         if (!dnd || !allows(user, pkg)) return false;
         String key = key(user, pkg);
-        return !restrictedApps.contains(key) || (channel != null && channelRules.contains(key + "=" + channel));
+        return !restrictedApps.contains(key) || (channel != null && (channelRules.contains(key + "=" + channel) || options.parentAllowed(key,channel,channelRules)));
     }
 
     static final int SUPPRESS_LOCKSCREEN_ALERT = -1;
@@ -88,7 +100,7 @@ public final class WhitelistPolicy {
             // In this callback use the native "do not wake" field without granting a zen exception.
             return SUPPRESS_LOCKSCREEN_ALERT;
         }
-        int mode = screenModeFor(user, pkg);
+        int mode = options.value(key(user,pkg),channel,"mode",screenModeFor(user, pkg));
         return mode == 3 ? SUPPRESS_LOCKSCREEN_ALERT : mode;
     }
     static int legacyMode(Object value) {

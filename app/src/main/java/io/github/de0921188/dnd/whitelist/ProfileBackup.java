@@ -9,10 +9,11 @@ final class ProfileBackup {
     boolean enabled;
     final Set<String> noSound = new TreeSet<>(), noVibration = new TreeSet<>();
     final Map<String,Integer> modes = new TreeMap<>();
+    final Map<String,Set<String>> options = new TreeMap<>();
     final Map<String,Set<String>> channels = new TreeMap<>();
 
     static ProfileBackup capture(int user, boolean enabled, Set<String> apps, Map<String,Integer> modes,
-                                 Set<String> channels, Set<String> noSound, Set<String> noVibration) {
+                                 Set<String> channels, Set<String> noSound, Set<String> noVibration, Set<String> options) {
         ProfileBackup result = new ProfileBackup();
         result.enabled = enabled;
         String prefix = user + ":";
@@ -22,6 +23,7 @@ final class ProfileBackup {
             if (noSound.contains(key)) result.noSound.add(pkg);
             if (noVibration.contains(key)) result.noVibration.add(pkg);
             result.modes.put(pkg, modes.getOrDefault(key, 0));
+            result.options.put(pkg, ids(options,key));
             result.channels.put(pkg, ids(channels, key));
         }
         return result;
@@ -36,14 +38,14 @@ final class ProfileBackup {
         for (String pkg : modes.keySet()) {
             apps.put(new JSONObject().put("package", pkg).put("mode", modes.get(pkg))
                     .put("sound", !noSound.contains(pkg)).put("vibration", !noVibration.contains(pkg))
-                    .put("channels", new JSONArray(channels.get(pkg))));
+                    .put("options", new JSONArray(options.get(pkg))).put("channels", new JSONArray(channels.get(pkg))));
         }
-        return new JSONObject().put("format","HyperOSDndWhitelist").put("version",3)
+        return new JSONObject().put("format","HyperOSDndWhitelist").put("version",4)
                 .put("enabled",enabled).put("apps",apps).toString(2);
     }
     static ProfileBackup parse(String text) throws JSONException {
         JSONObject data = new JSONObject(text);
-        if (!"HyperOSDndWhitelist".equals(data.getString("format")) || !(Integer.valueOf(1).equals(data.get("version")) || Integer.valueOf(2).equals(data.get("version")) || Integer.valueOf(3).equals(data.get("version")))
+        if (!"HyperOSDndWhitelist".equals(data.getString("format")) || !(Integer.valueOf(1).equals(data.get("version")) || Integer.valueOf(2).equals(data.get("version")) || Integer.valueOf(3).equals(data.get("version")) || Integer.valueOf(4).equals(data.get("version")))
                 || !(data.get("enabled") instanceof Boolean)) throw new JSONException("format");
         ProfileBackup result = new ProfileBackup();
         result.enabled = data.getBoolean("enabled");
@@ -69,6 +71,16 @@ final class ProfileBackup {
                 if (!(id instanceof String) || ((String) id).isEmpty()) throw new JSONException("channel");
                 rules.add((String)id);
             }
+            Set<String> extras = new TreeSet<>();
+            if (data.getInt("version") >= 4) {
+                JSONArray opts = row.getJSONArray("options");
+                for (int j=0; j<opts.length(); j++) {
+                    Object opt = opts.get(j);
+                    if (!(opt instanceof String s) || !ChannelOptions.valid(s)) throw new JSONException("option");
+                    extras.add(s);
+                }
+            }
+            result.options.put(pkg,extras);
             result.channels.put(pkg,rules);
         }
         return result;

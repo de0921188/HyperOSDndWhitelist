@@ -12,7 +12,8 @@ final class HookConfig {
     private final XposedModule module;
     private SharedPreferences preferences;
     private long lastRead = -2000;
-    private boolean reportedError;
+    volatile long revision = -1;
+    volatile boolean reportedError;
     private WhitelistPolicy snapshot = new WhitelistPolicy(false, Collections.emptySet());
     HookConfig(XposedModule module) { this.module = module; }
     synchronized WhitelistPolicy get() {
@@ -25,7 +26,8 @@ final class HookConfig {
             int mode = WhitelistPolicy.legacyMode(values.get("screen_mode"));
             snapshot = new WhitelistPolicy(Boolean.TRUE.equals(values.get("enabled")), strings(values.get("apps")), mode,
                     AppModes.decode(strings(values.get("app_modes"))), strings(values.get("channels")),
-                    strings(values.get("no_sound")), strings(values.get("no_vibration")));
+                    strings(values.get("no_sound")), strings(values.get("no_vibration")), strings(values.get("channel_options")));
+            revision = values.get("revision") instanceof Long r ? r : 0L;
             reportedError = false;
         } catch (Throwable error) {
             snapshot = new WhitelistPolicy(false, Collections.emptySet()); preferences = null;

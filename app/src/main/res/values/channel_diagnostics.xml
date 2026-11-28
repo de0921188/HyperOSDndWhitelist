@@ -1,0 +1,13 @@
+<resources>
+    <string name="trace_next">診斷下一則通知</string>
+    <string name="trace_wait">請在兩分鐘內觸發目標 App 的通知，再查看結果。</string>
+    <string name="trace_result">查看診斷報告</string>
+    <string name="unobserved">未觀測到</string>
+    <string name="trace_different">兩個程序未確認為同一次通知，請分別解讀。</string>
+    <string name="rule_revision">規則版本</string>
+    <string name="only_selected">只允許所選類別（未選取即不放行）</string>
+    <string name="all_categories">允許所有類別</string>
+    <string name="conversations">展開／收合對話</string>
+    <string name="inherit">沿用上層設定</string>
+    <string name="channel_state">重要性 %1$s · 鈴聲 %2$s · 震動 %3$s</string>
+</resources>

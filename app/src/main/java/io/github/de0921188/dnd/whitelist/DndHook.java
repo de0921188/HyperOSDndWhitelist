@@ -17,7 +17,7 @@ public final class DndHook extends io.github.libxposed.api.XposedModule {
     private final java.util.WeakHashMap<Object, Boolean> boundEntries = new java.util.WeakHashMap<>();
     private final NativeWakeScope nativeWake = new NativeWakeScope();
 
-    private final RuntimeStatus runtime = new RuntimeStatus();
+    private final RuntimeStatus runtime = new RuntimeStatus(config);
     private boolean serverInstalled, systemUiInstalled;
     @Override public void onModuleLoaded(ModuleLoadedParam param) {
         logMessage("Modern API " + getApiVersion() + " loaded in " + param.getProcessName());
@@ -40,18 +40,32 @@ public final class DndHook extends io.github.libxposed.api.XposedModule {
         String helper = "com.android.server.notification.NotificationAttentionHelper";
         hook(loader,helper,"playSound", new HookRunner.Callback() {
             @Override protected void beforeHookedMethod(HookRunner.Invocation p) {
-                if (suppressPlayback(findSbn(p.args),true)) p.setResult(false);
+                StatusBarNotification n=findSbn(p.args);
+                boolean muted=suppressPlayback(n,true);
+                if (runtime.tracePackageActive()) runtime.observe(n,muted ? "sound: suppressed" : "sound: playback reached");
+                if (muted) p.setResult(false);
             }
         });
         hook(loader,helper,"playVibration", new HookRunner.Callback() {
             @Override protected void beforeHookedMethod(HookRunner.Invocation p) {
-                if (suppressPlayback(findSbn(p.args),false)) p.setResult(false);
+                StatusBarNotification n=findSbn(p.args);
+                boolean muted=suppressPlayback(n,false);
+                if (runtime.tracePackageActive()) runtime.observe(n,muted ? "vibration: suppressed" : "vibration: playback reached");
+                if (muted) p.setResult(false);
             }
         });
         // The in-call sound branch has no record argument. Bind its decision to this invocation.
         DecisionScope muteInCall = new DecisionScope();
         hook(loader,helper,"buzzBeepBlinkLocked", new HookRunner.Callback() {
             @Override protected void beforeHookedMethod(HookRunner.Invocation p) {
+                if (runtime.tracePackageActive()) {
+                    StatusBarNotification n=findSbn(p.args);
+                    for(Object arg:p.args) if(arg!=null && arg.getClass().getName().equals("com.android.server.notification.NotificationRecord")) {
+                        try { runtime.observe(n, Reflector.getBooleanField(arg,"isUpdate") ? "notification: update" : "notification: new"); }
+                        catch (ReflectiveOperationException ignored) { runtime.observe(n,"attention: reached"); }
+                        break;
+                    }
+                }
                 p.setObjectExtra("audio.previous", muteInCall.enter(suppressPlayback(findSbn(p.args),true)));
             }
             @Override protected void afterHookedMethod(HookRunner.Invocation p) {
@@ -155,6 +169,9 @@ public final class DndHook extends io.github.libxposed.api.XposedModule {
                                     == android.app.Notification.GROUP_ALERT_SUMMARY;
                             mode = config.get().notificationWakeMode(runtime.dnd, userId(n), n.getPackageName(),
                                     notification.getChannelId(), summary, repeated && once, silentGroupMember);
+                            if (runtime.tracePackageActive()) runtime.observe(n,"SystemUI: " + (repeated ? "rebind" : "first bind")
+                                    + (once ? ", only-alert-once" : "") + (summary ? ", summary" : "")
+                                    + (silentGroupMember ? ", quiet child" : "") + ", wake=" + mode);
                         }
                         if (mode == 0 && !nativeWake.active()) return;
                         Object coordinator = Reflector.getObjectField(p.thisObject, "f$0");
@@ -215,7 +232,9 @@ public final class DndHook extends io.github.libxposed.api.XposedModule {
     private static int userId(StatusBarNotification n) { return n.getUserId(); }
 
     private boolean selected(StatusBarNotification n) {
-        return runtime.dnd && n != null && config.get().allowsNotification(true, userId(n), n.getPackageName(), n.getNotification().getChannelId());
+        boolean match = runtime.dnd && n != null && config.get().allowsNotification(true, userId(n), n.getPackageName(), n.getNotification().getChannelId());
+        if (runtime.tracePackageActive()) runtime.observe(n, match ? "rule: match" : "rule: no match");
+        return match;
     }
 
     private static StatusBarNotification findSbn(Object[] args) {

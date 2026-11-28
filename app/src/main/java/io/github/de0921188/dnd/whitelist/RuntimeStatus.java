@@ -22,6 +22,36 @@ final class RuntimeStatus {
     private static final String PACKAGE = "io.github.de0921188.dnd.whitelist";
     static final String QUERY = PACKAGE + ".QUERY_HOOKS";
     static final String PERMISSION = PACKAGE + ".permission.DIAGNOSTICS";
+    private final HookConfig config;
+    RuntimeStatus(HookConfig config) { this.config = config; }
+    private volatile String tracePackage;
+    private int traceUser;
+    private long deadline, post;
+    private String notificationKey, channel;
+    private final java.util.LinkedHashSet<String> stages = new java.util.LinkedHashSet<>();
+    boolean tracePackageActive() { return tracePackage != null; }
+    synchronized void observe(android.service.notification.StatusBarNotification n,String stage) {
+        if (tracePackage == null || n == null || !tracePackage.equals(n.getPackageName())
+                || n.getUserId()!=traceUser || android.os.SystemClock.elapsedRealtime()>=deadline) return;
+        if (notificationKey == null) {
+            notificationKey=n.getKey(); post=n.getPostTime(); channel=n.getNotification().getChannelId();
+        }
+        if (post==n.getPostTime() && notificationKey.equals(n.getKey())) stages.add(stage);
+    }
+    private synchronized void trace(String pkg,int user,String action,Bundle out,Handler handler) {
+        if ("arm".equals(action)) {
+            tracePackage=pkg; traceUser=user; deadline=android.os.SystemClock.elapsedRealtime()+120000;
+            notificationKey=null; channel=null; post=0; stages.clear();
+            long expiry=deadline;
+            handler.postDelayed(()->{ synchronized (RuntimeStatus.this) {
+                if (deadline==expiry) { tracePackage=null; notificationKey=null; channel=null; post=0; stages.clear(); }
+            } },120000);
+        } else if (pkg.equals(tracePackage) && user==traceUser) {
+            out.putString("_trace",String.join("\n",stages));
+            out.putString("_channel",channel);
+            out.putLong("_post",post);
+        }
+    }
     private final ConcurrentSkipListMap<String, Integer> hooks = new ConcurrentSkipListMap<>();
     volatile boolean dnd;
     private int callbacks, samples, errors;
@@ -88,7 +118,15 @@ final class RuntimeStatus {
                         result.putLong("_us", samples == 0 ? 0 : sampleNanos / samples / 1000);
                     }
                     String pkg = intent.getStringExtra("package");
-                    if (server && pkg != null) {
+                    result.putLong("_revision",config.revision);
+                    result.putBoolean("_readError",config.reportedError);
+                    result.putBoolean("_zen",dnd);
+                    String action=intent.getStringExtra("trace");
+                    if (action != null && pkg != null) {
+                        try { trace(pkg,getSendingUserIdCompat(this),action,result,handler); }
+                        catch (Exception ignored) { }
+                    }
+                    if (server && pkg != null && action == null) {
                         try {
                             int user = getSendingUserIdCompat(this);
                             android.content.pm.PackageManager pm = ((Context) Context.class.getMethod("createContextAsUser", android.os.UserHandle.class, int.class)
@@ -100,17 +138,19 @@ final class RuntimeStatus {
                                     .invoke(manager, pkg, uid, false);
                             Object list = slice instanceof List ? slice : slice.getClass().getMethod("getList").invoke(slice);
                             ArrayList<String> ids = new ArrayList<>(), labels = new ArrayList<>();
+                            ArrayList<String> parents = new ArrayList<>(), states = new ArrayList<>();
                             int bytes = 0;
                             for (Object obj : (List<?>) list) {
                                 NotificationChannel ch = (NotificationChannel) obj;
-                                if (ch.getParentChannelId() != null) continue;
+
                                 String name = String.valueOf(ch.getName());
                                 bytes += 2 * (name.length() + ch.getId().length());
+                                bytes += 64 + (ch.getParentChannelId()==null ? 0 : 2*ch.getParentChannelId().length());
                                 if (bytes > 96000) break;
-                                ids.add(ch.getId()); labels.add(name);
+                                ids.add(ch.getId()); labels.add(name); parents.add(ch.getParentChannelId()); states.add(ChannelReader.state(ch));
                             }
                             result.putStringArrayList("_ids", ids);
-                            result.putStringArrayList("_labels", labels);
+                            result.putStringArrayList("_labels", labels); result.putStringArrayList("_parents",parents); result.putStringArrayList("_states",states);
                         } catch (Exception ignored) { /* Manual channel IDs remain available. */ }
                     }
                     setResultExtras(result);

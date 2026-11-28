@@ -8,6 +8,7 @@ import org.json.JSONArray;
 
 /** Standalone read-only fallback launched only when the user selects the root option. */
 public final class ChannelReader {
+    static String state(NotificationChannel ch) { return ch.getImportance()+","+(ch.getSound()!=null ? 1 : 0)+","+(ch.shouldVibrate()?1:0); }
     public static void main(String[] args) throws Exception {
         Looper.prepareMainLooper();
         if (args.length != 2) throw new IllegalArgumentException();
@@ -20,8 +21,8 @@ public final class ChannelReader {
         JSONArray rows = new JSONArray();
         for (Object item : list) {
             NotificationChannel channel = (NotificationChannel)item;
-            if (channel.getParentChannelId() == null)
-                rows.put(new JSONArray().put(channel.getId()).put(String.valueOf(channel.getName())));
+
+                rows.put(new JSONArray().put(channel.getId()).put(String.valueOf(channel.getName())).put(channel.getParentChannelId()).put(state(channel)));
         }
         System.out.println(rows);
     }

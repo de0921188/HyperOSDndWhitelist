@@ -15,6 +15,8 @@ final class AodChannelFilter {
     private final HookConfig config;
     private final RuntimeStatus runtime;
     private final Set<ClassLoader> attached = new HashSet<>();
+    private final Map<ClassLoader,Integer> attempts = new WeakHashMap<>();
+    private final Map<ClassLoader,Long> retryAt = new WeakHashMap<>();
     private final Map<String, Meta> snapshot = new HashMap<>();
 
     private static final class Meta {
@@ -54,7 +56,13 @@ final class AodChannelFilter {
         } catch (ReflectiveOperationException | RuntimeException e) { report(e); }
     }
     private synchronized void capture(ClassLoader loader, StatusBarNotification[] entries) throws ReflectiveOperationException {
-        if (attached.add(loader)) {
+        if (!attached.contains(loader)) {
+            long now = android.os.SystemClock.elapsedRealtime();
+            int count = attempts.getOrDefault(loader,0);
+            if (count >= 4 || now < retryAt.getOrDefault(loader,0L)) return;
+            attempts.put(loader,count+1);
+            retryAt.put(loader,now + 1000L * (1 << count));
+            runtime.hook("AOD channel animation",0);
             Class<?> task = Class.forName(CONTROLLER + "$QueryTask",false,loader);
             Class<?> wrap = Class.forName(CONTROLLER + "$NotificationWrap",false,loader);
             Method publish = task.getDeclaredMethod("onPostExecute",wrap);
@@ -68,6 +76,7 @@ final class AodChannelFilter {
                 } catch (ReflectiveOperationException | RuntimeException e) { report(e); }
                 return chain.proceed();
             });
+            attached.add(loader);
             runtime.hook("AOD channel animation",1);
             module.log(Log.INFO,"DndWhitelist","AOD channel animation hook loaded");
         }

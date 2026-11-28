@@ -75,6 +75,7 @@ final class AdvancedSettings {
             else if (!now.modes.get(pkg).equals(backup.modes.get(pkg))
                     || now.noSound.contains(pkg) != backup.noSound.contains(pkg)
                     || now.noVibration.contains(pkg) != backup.noVibration.contains(pkg)
+                    || !now.options.get(pkg).equals(backup.options.get(pkg))
                     || !now.channels.get(pkg).equals(backup.channels.get(pkg))) conflicts.add(pkg);
         }
         String summary = ui.getString(R.string.preview,added,conflicts.size(),missing.size(),
@@ -85,7 +86,11 @@ final class AdvancedSettings {
                 .setNegativeButton(R.string.cancel,null).setPositiveButton(R.string.import_file,(d,w)->ui.merge(backup)).show();
     }
     private void query(String target, String pkg, Consumer<Bundle> done) {
+        query(target,pkg,null,done);
+    }
+    private void query(String target,String pkg,String action,Consumer<Bundle> done) {
         Intent intent = new Intent(RuntimeStatus.QUERY).setPackage(target);
+        if (action != null) intent.putExtra("trace",action);
         if (pkg != null) intent.putExtra("package",pkg);
         try {
             ui.sendOrderedBroadcast(intent,null,new BroadcastReceiver() {
@@ -95,11 +100,50 @@ final class AdvancedSettings {
             },null,0,null,null);
         } catch (RuntimeException failure) { if (active()) done.accept(null); }
     }
+    void trace(String pkg,String key) {
+        query("android",pkg,"arm",a -> query("com.android.systemui",pkg,"arm",b ->
+            new AlertDialog.Builder(ui).setTitle(R.string.trace_next).setMessage(R.string.trace_wait)
+                .setPositiveButton(R.string.trace_result,(d,w)->report(pkg,key))
+                .setNegativeButton(R.string.cancel,null).show()));
+    }
+    private void report(String pkg,String key) {
+        query("android",pkg,"read",a -> query("com.android.systemui",pkg,"read",b -> {
+            StringBuilder text=new StringBuilder();
+            Bundle[] processes={a,b};
+            for (int i=0;i<processes.length;i++) { Bundle result=processes[i];
+                text.append(i==0 ? "system_server" : "SystemUI").append("\n");
+                if (result!=null && result.containsKey("_revision")) {
+                    sync(text,result);
+                    String stages=result.getString("_trace","");
+                    text.append("\n").append(stages.isEmpty()?ui.getString(R.string.unobserved):stages);
+                } else text.append(ui.getString(R.string.unobserved));
+                text.append("\n\n");
+            }
+            if (a!=null && b!=null && a.getLong("_post")!=b.getLong("_post"))
+                text.append(ui.getString(R.string.trace_different));
+            String preview=text.toString();
+            AlertDialog.Builder dialog=new AlertDialog.Builder(ui).setTitle(R.string.trace_result).setMessage(preview)
+                .setPositiveButton(android.R.string.copy,(d,w)-> ((ClipboardManager)ui.getSystemService(Context.CLIPBOARD_SERVICE))
+                    .setPrimaryClip(ClipData.newPlainText("DND",preview))).setNegativeButton(R.string.ok,null);
+            String id=a==null?null:a.getString("_channel");
+            if(id==null && b!=null) id=b.getString("_channel");
+            final String channel=id;
+            if(channel!=null) dialog.setNeutralButton(channel,(d,w)->channels(key,pkg,R.string.confirm,channel));
+            dialog.show();
+        }));
+    }
+    private void sync(StringBuilder text,Bundle b) {
+        text.append(ui.getString(R.string.rule_revision)).append(" ").append(b.getLong("_revision",-1))
+            .append(" · DND ").append(ui.getString(b.getBoolean("_zen") ? R.string.on:R.string.off));
+        if(b.getBoolean("_readError")) text.append(" · ").append(ui.getString(R.string.disconnected));
+    }
     private void diagnostics() {
         query("android",null,server -> query("com.android.systemui",null,sysui -> {
             StringBuilder text = new StringBuilder(ui.getString(R.string.diag_hint));
             text.append("\n\n").append(ui.getString(R.string.diag_service)).append(" · ")
                 .append(ui.getString(SettingsBridge.get().preferences() == null ? R.string.disconnected : R.string.connected));
+            android.content.SharedPreferences prefs=SettingsBridge.get().preferences();
+            if(prefs!=null) text.append("\n").append(ui.getString(R.string.rule_revision)).append(" ").append(prefs.getLong("revision",0));
             append(text,"system_server",server); append(text,"SystemUI",sysui);
             new AlertDialog.Builder(ui).setTitle(R.string.diagnostics).setMessage(text)
                     .setPositiveButton(R.string.ok,null).show();
@@ -110,11 +154,25 @@ final class AdvancedSettings {
         if (result == null || !result.containsKey("_errors")) {
             text.append(ui.getString(R.string.unknown)); return;
         }
+        sync(text,result); text.append("\n");
+        String[][] groups = process.equals("SystemUI") ? new String[][]{
+            {"Heads-up","checkHeadsUp","isZenModeOn","shouldSuppressVisualEffect"},
+            {"Wake","onViewBound","isZenModeOn"},{"AOD","AOD channel animation"}}
+            : new String[][]{{"Sound","shouldIntercept","getAudioAttributes","playSound"},
+                {"Vibration","shouldIntercept","isDeniedPlayVibration","playVibration"}};
+        for(String[] group:groups) {
+            boolean ready=true;
+            for(int i=1;i<group.length;i++) ready &= result.getInt(group[i],0)>0;
+            text.append(group[0]).append(" · ").append(ui.getString(ready?R.string.found:R.string.unobserved)).append("\n");
+        }
         for (String name : new TreeSet<>(result.keySet())) if (!name.startsWith("_"))
             text.append(name).append(" · ").append(ui.getString(result.getInt(name)>0 ? R.string.found : R.string.missing)).append("\n");
         text.append(ui.getString(R.string.metrics,result.getInt("_errors"),result.getInt("_samples"),result.getLong("_us")));
     }
     void channels(String key,String pkg,int saveLabel) {
+        channels(key,pkg,saveLabel,null);
+    }
+    void channels(String key,String pkg,int saveLabel,String focus) {
         query("android",pkg,result -> {
             Set<String> chosen = ui.channelIds(key);
             ArrayList<String> ids = result == null ? null : result.getStringArrayList("_ids");
@@ -126,7 +184,7 @@ final class AdvancedSettings {
                         .setNegativeButton(R.string.cancel,null).show();
                 return;
             }
-            choose(key,saveLabel,chosen,ids,labels);
+            new ChannelEditor(ui,key,pkg,saveLabel,chosen,ids,labels,result.getStringArrayList("_parents"),result.getStringArrayList("_states")).show(focus);
         });
     }
 
@@ -155,34 +213,17 @@ final class AdvancedSettings {
                     rows = new org.json.JSONArray(payload);
                 } finally { handler.removeCallbacks(timeout); }
                 ArrayList<String> ids = new ArrayList<>(), labels = new ArrayList<>();
+                ArrayList<String> parents=new ArrayList<>(), states=new ArrayList<>();
                 for (int i=0;i<rows.length();i++) {
                     org.json.JSONArray row = rows.getJSONArray(i);
-                    ids.add(row.getString(0)); labels.add(row.getString(1));
+                    ids.add(row.getString(0)); labels.add(row.getString(1)); parents.add(row.isNull(2)?null:row.getString(2)); states.add(row.getString(3));
                 }
                 ui.runOnUiThread(() -> {
-                    if (active()) choose(key,saveLabel,ui.channelIds(key),ids,labels);
+                    if (active()) new ChannelEditor(ui,key,pkg,saveLabel,ui.channelIds(key),ids,labels,parents,states).show(null);
                 });
             } catch (Exception error) { ui.runOnUiThread(() -> toast(R.string.query_failed)); }
             finally { if (process != null) process.destroy(); }
         },"DndWhitelist-channel-query").start();
-    }
-    private void choose(String key,int saveLabel,Set<String> chosen,ArrayList<String> ids,ArrayList<String> labels) {
-            if (ids.isEmpty() && chosen.isEmpty()) {
-                new AlertDialog.Builder(ui).setTitle(R.string.channels).setMessage(R.string.no_channels)
-                        .setPositiveButton(R.string.ok,null).show();
-                return;
-            }
-            for (String id : chosen) if (!ids.contains(id)) { ids.add(id); labels.add(id); }
-            boolean[] checked = new boolean[ids.size()];
-            String[] choices = new String[ids.size()];
-            for (int i=0;i<ids.size();i++) {
-                checked[i]=chosen.contains(ids.get(i)); choices[i]=Collections.frequency(labels,labels.get(i)) > 1 ? labels.get(i)+"\n"+ids.get(i) : labels.get(i);
-            }
-            new AlertDialog.Builder(ui).setTitle(R.string.channel_note).setMultiChoiceItems(choices,checked,
-                    (d,w,on)-> { if (on) chosen.add(ids.get(w)); else chosen.remove(ids.get(w)); })
-                    .setNeutralButton(R.string.manual,(d,w)->manual(key,chosen,saveLabel))
-                    .setPositiveButton(saveLabel,(d,w)->ui.updateChannels(key,chosen))
-                    .setNegativeButton(R.string.cancel,null).show();
     }
     private void manual(String key,Set<String> chosen,int saveLabel) {
         EditText input = new EditText(ui); input.setMinLines(3); input.setHint(R.string.manual_hint);
@@ -191,7 +232,7 @@ final class AdvancedSettings {
                 .setPositiveButton(saveLabel,(d,w)->{
                     Set<String> result = new TreeSet<>();
                     for (String id : input.getText().toString().split("\n")) if (!id.isEmpty()) result.add(id);
-                    ui.updateChannels(key,result);
+                    if (!ui.canEdit()) return; ui.options.add(key+"=selected"); ui.updateChannels(key,result);
                 }).setNegativeButton(R.string.cancel,null).show();
     }
 }

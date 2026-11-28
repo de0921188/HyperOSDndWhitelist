@@ -1,0 +1,13 @@
+<resources>
+    <string name="trace_next">Diagnose next notification</string>
+    <string name="trace_wait">Trigger a notification within two minutes, then view the result.</string>
+    <string name="trace_result">View diagnostic report</string>
+    <string name="unobserved">Not observed</string>
+    <string name="trace_different">Processes may have observed different events.</string>
+    <string name="rule_revision">Rule revision</string>
+    <string name="only_selected">Selected categories only (none selected allows none)</string>
+    <string name="all_categories">Allow all categories</string>
+    <string name="conversations">Show or hide conversations</string>
+    <string name="inherit">Inherit</string>
+    <string name="channel_state">Importance %1$s · Sound %2$s · Vibration %3$s</string>
+</resources>

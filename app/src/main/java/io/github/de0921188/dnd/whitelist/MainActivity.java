@@ -107,13 +107,14 @@ public final class MainActivity extends Activity {
     private SharedPreferences prefs;
     private boolean bridgeReady, binding;
     private final Set<String> noSound = new HashSet<>(), noVibration = new HashSet<>();
+    final Set<String> options = new HashSet<>();
     private final Set<String> channels = new HashSet<>();
     private ListView list;
     private AdvancedSettings advanced;
     private void loadSettings() {
         prefs = SettingsBridge.get().preferences();
         bridgeReady = prefs != null;
-        selected.clear(); appModes.clear(); channels.clear(); noSound.clear(); noVibration.clear();
+        options.clear(); selected.clear(); appModes.clear(); channels.clear(); noSound.clear(); noVibration.clear();
         binding = true;
         try {
             if (bridgeReady) {
@@ -124,6 +125,7 @@ public final class MainActivity extends Activity {
                 for (String key : selected) appModes.putIfAbsent(key, legacyMode);
                 noSound.addAll(prefs.getStringSet("no_sound", Collections.emptySet()));
                 noVibration.addAll(prefs.getStringSet("no_vibration", Collections.emptySet()));
+                options.addAll(prefs.getStringSet("channel_options", Collections.emptySet()));
                 channels.addAll(prefs.getStringSet("channels", Collections.emptySet()));
                 master.setChecked(Boolean.TRUE.equals(values.get("enabled")));
             } else master.setChecked(false);
@@ -349,6 +351,10 @@ public final class MainActivity extends Activity {
         vibration.setChecked(!noVibration.contains(key));
         vibration.setMinHeight(dp(48));
         content.addView(vibration);
+        Button diagnose = new Button(this);
+        diagnose.setText(R.string.trace_next);
+        diagnose.setOnClickListener(v -> advanced.trace(app.pkg,key));
+        content.addView(diagnose);
         sound.setEnabled(current != 0);
         vibration.setEnabled(current != 0);
         modes.setOnCheckedChangeListener((group, id) -> {
@@ -365,6 +371,7 @@ public final class MainActivity extends Activity {
                         if (modeIds[i] == modes.getCheckedRadioButtonId()) { mode = i; break; }
                     }
                     if (mode == 0) {
+                        options.removeIf(o -> o.startsWith(key + "="));
                         selected.remove(key); appModes.remove(key);
                         noSound.remove(key); noVibration.remove(key);
                         channels.removeIf(rule -> rule.startsWith(key + "="));
@@ -392,9 +399,10 @@ public final class MainActivity extends Activity {
         if (!canEdit()) return;
         master.setEnabled(false);
         SettingsBridge.get().persist(prefs, master.isChecked(), new HashSet<>(selected),
-                AppModes.encode(appModes), new HashSet<>(channels), new HashSet<>(noSound), new HashSet<>(noVibration));
+                AppModes.encode(appModes), new HashSet<>(channels), new HashSet<>(noSound), new HashSet<>(noVibration), new HashSet<>(options));
     }
     Set<String> channelIds(String key) { return ProfileBackup.ids(channels, key); }
+    boolean restricted(String key) { return options.contains(key+"=selected") || !channelIds(key).isEmpty(); }
     void updateChannels(String key, Set<String> ids) {
         if (!canEdit()) return;
         if (selected.add(key)) appModes.put(key, 0);
@@ -403,12 +411,14 @@ public final class MainActivity extends Activity {
         save();
     }
     ProfileBackup snapshot() {
-        return ProfileBackup.capture(userId, master.isChecked(), selected, appModes, channels, noSound, noVibration);
+        return ProfileBackup.capture(userId, master.isChecked(), selected, appModes, channels, noSound, noVibration, options);
     }
     void merge(ProfileBackup backup) {
         if (!canEdit()) return;
         backup.modes.forEach((pkg, mode) -> {
             String key = WhitelistPolicy.key(userId, pkg);
+            options.removeIf(o -> o.startsWith(key + "="));
+            for (String option : backup.options.get(pkg)) options.add(key + "=" + option);
             selected.add(key); appModes.put(key, mode);
             if (backup.noSound.contains(pkg)) noSound.add(key); else noSound.remove(key);
             if (backup.noVibration.contains(pkg)) noVibration.add(key); else noVibration.remove(key);
@@ -462,7 +472,7 @@ public final class MainActivity extends Activity {
         if (testPending) { Toast.makeText(this, getString(R.string.test_pending), Toast.LENGTH_SHORT).show(); return; }
         String key = WhitelistPolicy.key(userId, getPackageName());
         Set<String> ids = channelIds(key);
-        boolean allow = bridgeReady && master.isChecked() && selected.contains(key) && (ids.isEmpty() || ids.contains("dnd_test"));
+        boolean allow = bridgeReady && master.isChecked() && selected.contains(key) && (!restricted(key) || ids.contains("dnd_test"));
         boolean dnd = nm.getCurrentInterruptionFilter() > NotificationManager.INTERRUPTION_FILTER_ALL;
         new AlertDialog.Builder(this).setTitle(R.string.test_title)
                 .setMessage(getString(R.string.test_info, getString(R.string.app_name),
@@ -530,7 +540,7 @@ public final class MainActivity extends Activity {
             boolean allowed = selected.contains(WhitelistPolicy.key(userId, app.pkg));
             String modeLabel = !allowed ? getString(R.string.row_deny) : getString(switch (appModes.getOrDefault(WhitelistPolicy.key(userId, app.pkg), 0)) { case 1 -> R.string.row_wake; case 2 -> R.string.row_edge; case 3 -> R.string.row_dark; default -> R.string.system_row; });
             int restricted = channelIds(WhitelistPolicy.key(userId, app.pkg)).size();
-            if (allowed && restricted > 0) modeLabel += getString(R.string.rule_count, restricted);
+            if (allowed && restricted(WhitelistPolicy.key(userId,app.pkg))) modeLabel += getString(R.string.rule_count, restricted);
             ((TextView) text.getChildAt(2)).setText(modeLabel);
             ((TextView) text.getChildAt(2)).setTextColor(getColor(allowed ? R.color.page_accent : R.color.page_secondary));
             CheckBox box = (CheckBox) row.getChildAt(1);

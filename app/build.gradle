@@ -6,8 +6,8 @@ android {
         applicationId 'io.github.de0921188.dnd.whitelist'
         minSdk 31
         targetSdk 36
-        versionCode 14
-        versionName '0.2.7'
+        versionCode 15
+        versionName '0.2.8'
     }
     buildTypes { release { minifyEnabled false } }
     compileOptions {
